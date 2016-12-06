@@ -25,9 +25,9 @@ from pex.installer import EggInstaller
 from pex.interpreter import PythonInterpreter
 from pex.iterator import Iterator
 from pex.package import EggPackage, SourcePackage
+from pex.pep425tags import get_platform
 from pex.pex import PEX
 from pex.pex_builder import PEXBuilder
-from pex.platforms import Platform
 from pex.requirements import requirements_from_file
 from pex.resolvable import Resolvable
 from pex.resolver import CachingResolver, Resolver, Unsatisfiable
@@ -290,8 +290,43 @@ def configure_clp_pex_environment(parser):
   group.add_option(
       '--platform',
       dest='platform',
-      default=Platform.current(),
-      help='The platform for which to build the PEX.  Default: %default')
+      default=None,
+      help='The platform for which to build the PEX. Defaults to the platform '
+           'of the running system.')
+
+  group.add_option(
+      '--python-version',
+      dest='python_version',
+      metavar='python_version',
+      default=None,
+      help=("Python version for which to to build the PEX. If not specified, "
+            "then the current system interpreter minor version is used. A major"
+            " version (e.g. '2') can be specified to match all "
+            "minor revs of that major version.  A minor version "
+            "(e.g. '34') can also be specified."),
+  )
+
+  group.add_option(
+      '--implementation',
+      dest='implementation',
+      metavar='implementation',
+      default=None,
+      help=("Python implementation for which to build the PEX (e.g. 'pp', 'jy',"
+            " 'cp',  or 'ip'). If not specified, then the current interpreter "
+            "implementation is used.  Use 'py' to force implementation-"
+            "agnostic wheels."),
+  )
+
+  group.add_option(
+      '--abi',
+      dest='abi',
+      metavar='abi',
+      default=None,
+      help=("Python ABI tag for which to build the PEX (e.g. 'pypy_41').  If "
+            "not specified, then the current interpreter abi tag is used.  "
+            "Generally you will need to specify --implementation, --platform, "
+            "and --python-version when using this option."),
+  )
 
   group.add_option(
       '--interpreter-cache-dir',
@@ -493,6 +528,32 @@ def build_pex(args, options, resolver_option_builder):
   if interpreter is None:
     die('Could not find compatible interpreter', CANNOT_SETUP_INTERPRETER)
 
+  # Copied from pip
+  if options.python_version:
+    python_versions = [options.python_version]
+  else:
+    python_versions = None
+
+  is_dist_restriction_set = any([
+    options.python_version,
+    options.platform,
+    options.abi,
+    options.implementation,
+  ])
+  all_dist_restrictions_set = all([
+    options.python_version,
+    options.platform,
+    options.abi,
+    options.implementation,
+  ])
+  if is_dist_restriction_set and (not resolver_option_builder.no_allow_builds or
+                                  not all_dist_restrictions_set):
+    raise ValueError(
+        "--no-build must be set and --no-wheel must not be set when "
+        "restricting platform and interpreter constraints using "
+        "--python-version, --platform, --abi, or --implementation."
+    )
+
   pex_builder = PEXBuilder(path=safe_mkdtemp(), interpreter=interpreter)
 
   pex_info = pex_builder.info
@@ -515,7 +576,9 @@ def build_pex(args, options, resolver_option_builder):
       constraints.append(r)
     resolvables.extend(constraints)
 
-  resolver_kwargs = dict(interpreter=interpreter, platform=options.platform)
+  resolver_kwargs = dict(interpreter=interpreter, platform=options.platform,
+                         versions=python_versions, impl=options.implementation,
+                         abi=options.abi)
 
   if options.cache_dir:
     resolver = CachingResolver(options.cache_dir, options.cache_ttl, **resolver_kwargs)
@@ -585,7 +648,7 @@ def main(args=None):
       os.rename(tmp_name, options.pex_name)
       return 0
 
-    if options.platform != Platform.current():
+    if options.platform and options.platform != get_platform():
       log('WARNING: attempting to run PEX with differing platform!')
 
     pex_builder.freeze()
