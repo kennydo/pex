@@ -288,6 +288,15 @@ def configure_clp_pex_environment(parser):
            'interpreter compatible with the one used to build the PEX file.')
 
   group.add_option(
+      '--tags',
+      dest='supported_tags',
+      default=None,
+      help='The supported PEP 425 compatibility tags for which to build the PEX.'
+           ' Defaults to those of the current system interpreter (e.g., '
+           'linux-x86_64-cp-27-mu). This takes precedence over the --platform, '
+           '--python-version, --abi, and --implementation args.')
+
+  group.add_option(
       '--platform',
       dest='platform',
       default=None,
@@ -527,6 +536,9 @@ def build_pex(args, options, resolver_option_builder):
 
   if interpreter is None:
     die('Could not find compatible interpreter', CANNOT_SETUP_INTERPRETER)
+
+  if options.supported_tags:
+    options.platform, options.implementation, options.python_version, options.abi = options.supported_tags.rsplit('-', 3)
 
   # Copied from pip
   dist_restrictions = [
