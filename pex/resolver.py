@@ -144,8 +144,8 @@ class _ResolvableSet(object):
 class Resolver(object):
   """Interface for resolving resolvable entities into python packages.
 
-  :param versions: a list of string versions, of the form ["33", "32"],
-    or None. The first version will be assumed to support our ABI.
+  :param version: string version (e.g., "33", "32") or None.
+    If None, use local system Python version.
   :param platform: specify the exact platform you want valid
     tags for, or None. If None, use the local system platform.
   :param impl: specify the exact implementation you want valid
@@ -160,15 +160,15 @@ class Resolver(object):
     return [package for package in packages
             if package.compatible(self._supported_tags)]
 
-  def __init__(self, allow_prereleases=None, interpreter=None, versions=None,
+  def __init__(self, allow_prereleases=None, interpreter=None, version=None,
                platform=None, impl=None, abi=None):
     self._interpreter = interpreter or PythonInterpreter.get()
     self._platform = platform
     self._allow_prereleases = allow_prereleases
     self._impl = impl
     self._abi = abi
-    self._versions = versions
-    self._supported_tags = get_supported(versions=self._versions,
+    self._version = version
+    self._supported_tags = get_supported(version=self._version,
                                          platform=self._platform,
                                          impl=self._impl,
                                          abi=abi)
@@ -308,7 +308,7 @@ def resolve(
     requirements,
     fetchers=None,
     interpreter=None,
-    versions=None,
+    version=None,
     platform=None,
     impl=None,
     abi=None,
@@ -326,8 +326,8 @@ def resolve(
     unspecified, the default is to look for packages on PyPI.
   :keyword interpreter: (optional) A :class:`PythonInterpreter` object to use for building
     distributions and for testing distribution compatibility.
-  :keyword versions: (optional) a list of string versions, of the form ["33", "32"],
-    or None. The first version will be assumed to support our ABI.
+  :keyword version: (optional) string version (e.g., "33", "32") or None.
+    If None, use local system Python version.
   :keyword platform: (optional) specify the exact platform you want valid
     tags for, or None. If None, use the local system platform.
   :keyword impl: (optional) specify the exact implementation you want valid
@@ -391,14 +391,14 @@ def resolve(
     resolver = CachingResolver(cache, cache_ttl,
                                allow_prereleases=allow_prereleases,
                                interpreter=interpreter,
-                               versions=versions,
+                               version=version,
                                platform=platform,
                                impl=impl,
                                abi=abi)
   else:
     resolver = Resolver(allow_prereleases=allow_prereleases,
                         interpreter=interpreter,
-                        versions=versions,
+                        version=version,
                         platform=platform,
                         impl=impl,
                         abi=abi)
