@@ -538,7 +538,10 @@ def build_pex(args, options, resolver_option_builder):
     die('Could not find compatible interpreter', CANNOT_SETUP_INTERPRETER)
 
   if options.supported_tags:
-    options.platform, options.implementation, options.python_version, options.abi = options.supported_tags.rsplit('-', 3)
+    (options.platform,
+     options.implementation,
+     options.python_version,
+     options.abi) = options.supported_tags.rsplit('-', 3)
 
   # Copied from pip
   dist_restrictions = [
