@@ -25,7 +25,7 @@ with open(version_py_file) as version_py:
 
 
 setup(
-  name = 'pex',
+  name = 'kedo-pex',
   version = __version__,
   description = "The PEX packaging toolchain.",
   long_description = LONG_DESCRIPTION,
